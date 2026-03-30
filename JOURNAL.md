@@ -22,3 +22,19 @@
 - **Hook Version**: 1.02
 - **Date**: 30-03-2026 10:53
 - **Prompt**: implement stubs and todos for a moving square in pygame, feel free to look at my implementation from main.py
+### **New Interaction**
+- **Agent Version**: 2.2
+- **Date**: 30-03-2026 10:54
+- **User**: success.aderibigbe@epita.fr
+- **Prompt**: implement stubs and todos for a moving square in pygame, feel free to look at my implementation from main.py
+- **CoPilot Mode**: Edit
+- **CoPilot Model**: GPT-5.3-Codex
+- **Socratic Mode**: ON
+- **Changes Made**: Implemented a complete moving square pygame program in main_test.py with input handling, boundary clamping, drawing, and game loop.
+- **Context and Reasons for Changes**: main_test.py was empty, so stubs/TODO responsibilities were implemented directly using a modular structure based on the existing pygame style in main.py.
+
+
+### **New Interaction**
+- **Hook Version**: 1.02
+- **Date**: 30-03-2026 11:39
+- **Prompt**: implement 10 randomly moving squares, use the code already here as reference
