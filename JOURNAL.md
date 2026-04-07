@@ -79,3 +79,8 @@
 - **Hook Version**: 1.02
 - **Date**: 07-04-2026 14:22
 - **Prompt**: something is wrong with my draw frame code and I cant tell it, should I define te draw frame in side the class?
+
+### **New Interaction**
+- **Hook Version**: 1.02
+- **Date**: 07-04-2026 14:29
+- **Prompt**: display mode is messing me up\
