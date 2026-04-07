@@ -14,3 +14,6 @@ Automatically captured prompt log. Entries are appended in chronological order (
 ### 07-04-2026 13:39
 - **Prompt**: I wanna add jittering, make it square have different sizes and different velocities, would a class be advised to be created
 
+### 07-04-2026 13:54
+- **Prompt**: looking at my class implementation so far, anything I should work on
+
