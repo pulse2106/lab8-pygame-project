@@ -49,3 +49,8 @@
 - **Changes Made**: Refactored main.py to animate 10 squares with randomized initial positions and velocities, wall-bounce updates, and per-frame rendering loop.
 - **Context and Reasons for Changes**: User requested 10 randomly moving squares using existing code as reference; existing file had mixed/partial logic and a quit variable bug, so it was consolidated into a stable multi-square animation.
 
+
+### **New Interaction**
+- **Hook Version**: 1.02
+- **Date**: 07-04-2026 13:39
+- **Prompt**: I wanna add jittering, make it square have different sizes and different velocities, would a class be advised to be created

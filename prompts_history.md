@@ -11,3 +11,6 @@ Automatically captured prompt log. Entries are appended in chronological order (
 ### 30-03-2026 11:39
 - **Prompt**: implement 10 randomly moving squares, use the code already here as reference
 
+### 07-04-2026 13:39
+- **Prompt**: I wanna add jittering, make it square have different sizes and different velocities, would a class be advised to be created
+
