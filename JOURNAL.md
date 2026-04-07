@@ -74,3 +74,8 @@
 - **Hook Version**: 1.02
 - **Date**: 07-04-2026 14:15
 - **Prompt**: hmm how does it look, can you explainjitter implemenmtions for me to
+
+### **New Interaction**
+- **Hook Version**: 1.02
+- **Date**: 07-04-2026 14:22
+- **Prompt**: something is wrong with my draw frame code and I cant tell it, should I define te draw frame in side the class?
