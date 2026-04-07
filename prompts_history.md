@@ -23,3 +23,6 @@ Automatically captured prompt log. Entries are appended in chronological order (
 ### 07-04-2026 14:09
 - **Prompt**: what about now
 
+### 07-04-2026 14:15
+- **Prompt**: hmm how does it look, can you explainjitter implemenmtions for me to
+

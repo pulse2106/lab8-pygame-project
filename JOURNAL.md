@@ -69,3 +69,8 @@
 - **Hook Version**: 1.02
 - **Date**: 07-04-2026 14:09
 - **Prompt**: what about now
+
+### **New Interaction**
+- **Hook Version**: 1.02
+- **Date**: 07-04-2026 14:15
+- **Prompt**: hmm how does it look, can you explainjitter implemenmtions for me to
