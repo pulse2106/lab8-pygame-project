@@ -28,8 +28,29 @@ class Square:
 
         self.vx = max(-self.max_speed, min(self.vx, self.max_speed))
         self.vy = max(-self.max_speed, min(self.vy, self.max_speed))
+
+    # def collide(self, squares: list[Square]):
+    #     for square in squares:
+    #         if (self.x == square.x):
+    #             self.vx *= -1
+    #             return self.vx
+            
+    #         elif (self.y == square.y):
+    #             self.vy *= -1
+    #             return self.vy
+
+    # def run_away(self, squares: list[Square]):
+    #     for square in squares:
+    #         if abs(self.x - square.x) <= 1.5:
+    #             self.vx *= -1
+    #             return self.vx
+    #         if abs(self.y - square.y) <= 1.5:
+    #             self.vy *= -1
+    #             return self.vy
     
-    def update(self) -> None:
+    def update(self, squares: list[Square]) -> None:
+        # self.collide(squares)
+        # self.run_away(squares)
         self.jitter()
         self.x += self.vx
         self.y += self.vy
@@ -71,7 +92,7 @@ def main() -> None:
                 run = False
 
         for square in squares:
-            square.update()
+            square.update(squares)
             
         draw_scene(win, squares)
         clock.tick(FPS)
