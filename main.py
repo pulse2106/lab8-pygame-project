@@ -8,62 +8,61 @@ SQUARE_COLOR = (40, 180, 255)
 SQUARE_COUNT = 100
 FPS = 60
 
+class Square:
+    def __init__(self) -> None:
+        self.size = random.uniform(5, 60)
+        self.max_speed = 1/self.size * 20
+        self.square_speed = random.uniform(2, self.max_speed)
+        self.x = random.uniform(0, WINDOW_WIDTH - self.size)
+        self.y = random.uniform(0, WINDOW_HEIGHT - self.size)
+        self.vx = self.random_velocity()
+        self.vy = self.random_velocity()
+        self.jitter_strength = 0.30
+        
+    def random_velocity(self):
+        return self.square_speed if random.choice([True, False]) else -  self.square_speed
 
-def random_velocity(speed: float) -> int:
-    return speed if random.choice([True, False]) else -speed
+    def jitter(self):
+        self.vx += random.choice([-self.jitter_strength, +self.jitter_strength])
+        self.vy += random.choice([-self.jitter_strength, +self.jitter_strength])
 
+        self.vx = max(-self.max_speed, min(self.vx, self.max_speed))
+        self.vy = max(-self.max_speed, min(self.vy, self.max_speed))
+    
+    def update(self) -> None:
+        self.jitter()
+        self.x += self.vx
+        self.y += self.vy
 
-def create_square(size: float, speed: float) -> dict[str, int]:
-    return {
-        "x": random.uniform(0, WINDOW_WIDTH - size),
-        "y": random.uniform(0, WINDOW_HEIGHT - size),
-        "vx": random_velocity(speed),
-        "vy": random_velocity(speed),
-    }
+        if self.x <= 0 or self.x >= WINDOW_WIDTH - self.size:
+            self.vx *= -1
+            self.x = max(0, min(self.x, WINDOW_WIDTH - self.size))
 
+        if self.y <= 0 or self.y >= WINDOW_HEIGHT - self.size:
+            self.vy *= -1
+            self.y = max(0, min(self.y, WINDOW_HEIGHT - self.size))
 
-def update_square(square: dict[str, int], size: float) -> None:
-    square["x"] += square["vx"]
-    square["y"] += square["vy"]
-
-    if square["x"] <= 0 or square["x"] >= WINDOW_WIDTH - size:
-        square["vx"] *= -1
-        square["x"] = max(0, min(square["x"], WINDOW_WIDTH - size))
-
-    if square["y"] <= 0 or square["y"] >= WINDOW_HEIGHT - size:
-        square["vy"] *= -1
-        square["y"] = max(0, min(square["y"], WINDOW_HEIGHT - size))
-
-
-def draw_scene(win: pygame.Surface, squares: list[dict[str, int]], size: float) -> None:
-    """Render the current frame."""
-    win.fill(BACKGROUND_COLOR)
-
-    for square in squares:
-        square_rect = pygame.Rect(square["x"], square["y"], size, size)
+    def draw(self, win):
+        square_rect = pygame.Rect(self.x, self.y, self.size, self.size)
         pygame.draw.rect(win, SQUARE_COLOR, square_rect)
 
+def draw_scene(win: pygame.Surface, squares: list[Square]) -> None:
+    """Render the current frame."""
+    win.fill(BACKGROUND_COLOR)
+    for square in squares:
+        square.draw(win)
     pygame.display.flip()
-
-def speed(size: float) -> float:
-    max_spped = (1/(size) * 20)
-    return max_spped
 
 # infinite loop
 def main() -> None:
     pygame.init()
-
-    
-    square_size = random.uniform(5, 60)
-    square_speed_max = speed(square_size)
-    square_speed = random.uniform(2, square_speed_max)
 
     clock = pygame.time.Clock()
     win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     # setting title to the window
     pygame.display.set_caption("Moving Squares")
 
-    squares = [create_square(square_size, square_speed) for _ in range(SQUARE_COUNT)]
+    squares = [Square() for _ in range(SQUARE_COUNT)]
 
     run = True
     while run:
@@ -72,9 +71,9 @@ def main() -> None:
                 run = False
 
         for square in squares:
-            update_square(square, square_size)
-
-        draw_scene(win, squares, square_size)
+            square.update()
+            
+        draw_scene(win, squares)
         clock.tick(FPS)
 
     pygame.quit()
