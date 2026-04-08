@@ -5,55 +5,78 @@ WINDOW_WIDTH = 1680
 WINDOW_HEIGHT = 920
 BACKGROUND_COLOR = (20, 20, 20)
 SQUARE_COLOR = (40, 180, 255)
-SQUARE_COUNT = 100
+SQUARE_COUNT = 50
 FPS = 60
 
 class Square:
     def __init__(self) -> None:
         self.size = random.uniform(5, 60)
-        self.max_speed = 1/self.size * 20
+        self.max_speed = 120/self.size
         self.square_speed = random.uniform(2, self.max_speed)
         self.x = random.uniform(0, WINDOW_WIDTH - self.size)
         self.y = random.uniform(0, WINDOW_HEIGHT - self.size)
+        self.vector_main = pygame.math.Vector2(self.x, self.y)
         self.vx = self.random_velocity()
         self.vy = self.random_velocity()
         self.jitter_strength = 0.30
+        self.margin = 80
         
     def random_velocity(self):
         return self.square_speed if random.choice([True, False]) else -  self.square_speed
+    
+    def clamp_speed(self):
+        self.vx = max(-self.max_speed, min(self.vx, self.max_speed))
+        self.vy = max(-self.max_speed, min(self.vy, self.max_speed))
+
+    def soft_wall(self):
+        if ((self.x < self.margin) or (self.x > (WINDOW_WIDTH-self.size-self.margin))):
+            self.vx += 0.4
+        
+        if ((self.y < self.margin) or (self.y > (WINDOW_HEIGHT-self.size-self.margin))):
+            self.vy += 0.4
+
+        self.clamp_speed()
+
 
     def jitter(self):
         self.vx += random.choice([-self.jitter_strength, +self.jitter_strength])
         self.vy += random.choice([-self.jitter_strength, +self.jitter_strength])
 
-        self.vx = max(-self.max_speed, min(self.vx, self.max_speed))
-        self.vy = max(-self.max_speed, min(self.vy, self.max_speed))
+        self.clamp_speed()
 
     # def collide(self, squares: list[Square]):
     #     for square in squares:
-    #         if (self.x == square.x):
+    #         if (self == square):
+    #             continue
+    #         elif (self.x == square.x):
     #             self.vx *= -1
     #             return self.vx
-            
     #         elif (self.y == square.y):
     #             self.vy *= -1
     #             return self.vy
 
-    # def run_away(self, squares: list[Square]):
-    #     for square in squares:
-    #         if abs(self.x - square.x) <= 1.5:
-    #             self.vx *= -1
-    #             return self.vx
-    #         if abs(self.y - square.y) <= 1.5:
-    #             self.vy *= -1
-    #             return self.vy
+    def run_away(self, squares: list[Square]):
+        for other in squares:
+            if (self.size < other.size):
+                distance = (self.vector_main - other.vector_main).length()
+                if distance > 200 or distance < 0.0001:  # Or some small epsilon
+                    continue
+
+                direction = (self.vector_main - other.vector_main).normalize()
+                escape_force = 0.5  # How aggressively to flee
+                self.vx += direction.x
+                self.vy += direction.y
+
+                self.clamp_speed()
     
     def update(self, squares: list[Square]) -> None:
         # self.collide(squares)
-        # self.run_away(squares)
+        self.run_away(squares)
         self.jitter()
         self.x += self.vx
         self.y += self.vy
+        self.vector_main = pygame.math.Vector2(self.x, self.y)
+        self.soft_wall()
 
         if self.x <= 0 or self.x >= WINDOW_WIDTH - self.size:
             self.vx *= -1
