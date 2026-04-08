@@ -38,3 +38,6 @@ Automatically captured prompt log. Entries are appended in chronological order (
 ### 07-04-2026 14:38
 - **Prompt**: update journal.md
 
+### 09-04-2026 01:06
+- **Prompt**: Im thinking of using the pygame vector implementation to implement a run_away feature where smaller boxes run from larger boxes in relation to proximity. What do you think I should watch out for
+
