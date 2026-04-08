@@ -129,3 +129,8 @@
 - **Hook Version**: 1.02
 - **Date**: 09-04-2026 01:29
 - **Prompt**: is there a risk of unbounded speed in this?
+
+### **New Interaction**
+- **Hook Version**: 1.02
+- **Date**: 09-04-2026 01:35
+- **Prompt**: when i run the code, overtime they tend to start gathering at the edges, any fix
