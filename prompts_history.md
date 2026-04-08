@@ -56,3 +56,6 @@ Automatically captured prompt log. Entries are appended in chronological order (
 ### 09-04-2026 01:35
 - **Prompt**: when i run the code, overtime they tend to start gathering at the edges, any fix
 
+### 09-04-2026 01:39
+- **Prompt**: I do not understand the value of margin, is it going to ba a newly implemented variable or I use window width and height
+
