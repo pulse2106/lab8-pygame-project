@@ -19,7 +19,6 @@ class Square:
         self.vx = self.random_velocity()
         self.vy = self.random_velocity()
         self.jitter_strength = 0.30
-        self.margin = 80
         
     def random_velocity(self):
         return self.square_speed if random.choice([True, False]) else -  self.square_speed
@@ -29,11 +28,21 @@ class Square:
         self.vy = max(-self.max_speed, min(self.vy, self.max_speed))
 
     def soft_wall(self):
-        if ((self.x < self.margin) or (self.x > (WINDOW_WIDTH-self.size-self.margin))):
-            self.vx += 0.4
+        if (self.x <= 0):
+            change_in_x = abs(self.x - 0)
+            self.vx += change_in_x
+
+        elif (self.x >= (WINDOW_WIDTH - self.size)):
+            change_in_x = abs(self.x - (WINDOW_WIDTH-self.size))
+            self.vx += change_in_x
         
-        if ((self.y < self.margin) or (self.y > (WINDOW_HEIGHT-self.size-self.margin))):
-            self.vy += 0.4
+        if (self.y <= 0):
+            change_in_y = abs(self.y - 0)
+            self.vy += change_in_y
+
+        elif (self.y >= (WINDOW_HEIGHT - self.size)):
+            change_in_y = abs(self.y - (WINDOW_HEIGHT-self.size))
+            self.vy += change_in_y
 
         self.clamp_speed()
 
@@ -57,15 +66,23 @@ class Square:
 
     def run_away(self, squares: list[Square]):
         for other in squares:
-            if (self.size < other.size):
+            size_dif = abs(self.size - other.size)
+            if (self.size < other.size) and (25 < size_dif <= 55):
                 distance = (self.vector_main - other.vector_main).length()
-                if distance > 200 or distance < 0.0001:  # Or some small epsilon
+                if distance > 150 or distance < 0.0001:  # Or some small epsilon
                     continue
 
                 direction = (self.vector_main - other.vector_main).normalize()
-                escape_force = 0.5  # How aggressively to flee
-                self.vx += direction.x
-                self.vy += direction.y
+                size_dif = abs(self.size - other.size)
+                escape_force = size_dif/10
+                if 5 < size_dif <= 25:
+                    escape_force = 1
+
+                elif 25 < size_dif <= 55:
+                    escape_force = 1.5
+                
+                self.vx += direction.x * escape_force
+                self.vy += direction.y * escape_force
 
                 self.clamp_speed()
     
