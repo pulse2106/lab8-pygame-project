@@ -75,11 +75,6 @@ class Square:
                 direction = (self.vector_main - other.vector_main).normalize()
                 size_dif = abs(self.size - other.size)
                 escape_force = size_dif/10
-                if 5 < size_dif <= 25:
-                    escape_force = 1
-
-                elif 25 < size_dif <= 55:
-                    escape_force = 1.5
                 
                 self.vx += direction.x * escape_force
                 self.vy += direction.y * escape_force
