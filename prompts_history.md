@@ -71,3 +71,6 @@ Automatically captured prompt log. Entries are appended in chronological order (
 ### 13-04-2026 11:27
 - **Prompt**: generate the code explorer site for this project
 
+### 13-04-2026 11:27
+- **Prompt**: Generate a code explorer learning dashboard site for this repository. Analyze all relevant source files (at least main.py and supporting docs if useful), and produce a single self-contained HTML output suitable for opening directly in a browser from the workspace. Include architecture overview, execution flow, key functions/classes, potential improvements, and Mermaid diagrams where helpful. Prefer writing output to a project file such as code_explorer.html or REPORT.html update if that is your expected target. Keep it readable for first-year software engineering students. Return: (1) exact output file path(s), (2) concise summary of sections generated, (3) any limitations if source is minimal.
+
