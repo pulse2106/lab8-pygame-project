@@ -62,3 +62,6 @@ Automatically captured prompt log. Entries are appended in chronological order (
 ### 09-04-2026 01:45
 - **Prompt**: update journal
 
+### 13-04-2026 11:22
+- **Prompt**: activate the journal logger
+
