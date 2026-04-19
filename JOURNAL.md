@@ -201,3 +201,19 @@
 - **Hook Version**: 1.02
 - **Date**: 13-04-2026 11:33
 - **Prompt**: Append a new JOURNAL.md entry for the user prompt: "generate the code explorer site for this project". Include timestamp April 13, 2026. Summarize that a code explorer site was generated at docs/code_explorer.html and opened in integrated browser. Mention no source code behavior changes were made to main.py.
+### **New Interaction**
+- **Agent Version**: 2.3
+- **Date**: 13-04-2026 00:00
+- **User**: aderibigbe@epita.fr
+- **Prompt**: generate the code explorer site for this project
+- **CoPilot Mode**: Agent
+- **CoPilot Model**: GPT-5.3-Codex
+- **Socratic Mode**: ON
+- **Changes Made**: Generated a code explorer site at docs/code_explorer.html and opened it in the integrated browser.
+- **Context and Reasons for Changes**: Logged the requested interaction outcome for project documentation; no source code behavior changes were made to main.py.
+
+
+### **New Interaction**
+- **Hook Version**: 1.02
+- **Date**: 19-04-2026 21:17
+- **Prompt**: I am trying to implement a collision logic, what do you think about my code
