@@ -98,3 +98,6 @@ Automatically captured prompt log. Entries are appended in chronological order (
 ### 20-04-2026 13:49
 - **Prompt**: now how do I display units on pygame and also draw grids
 
+### 20-04-2026 13:50
+- **Prompt**: yes exactly what you say
+

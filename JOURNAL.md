@@ -247,3 +247,8 @@
 - **Hook Version**: 1.02
 - **Date**: 20-04-2026 13:49
 - **Prompt**: now how do I display units on pygame and also draw grids
+
+### **New Interaction**
+- **Hook Version**: 1.02
+- **Date**: 20-04-2026 13:50
+- **Prompt**: yes exactly what you say
