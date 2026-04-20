@@ -217,3 +217,8 @@
 - **Hook Version**: 1.02
 - **Date**: 19-04-2026 21:17
 - **Prompt**: I am trying to implement a collision logic, what do you think about my code
+
+### **New Interaction**
+- **Hook Version**: 1.02
+- **Date**: 20-04-2026 13:27
+- **Prompt**: what is delta time and how do I implement it

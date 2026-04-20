@@ -80,3 +80,6 @@ Automatically captured prompt log. Entries are appended in chronological order (
 ### 19-04-2026 21:17
 - **Prompt**: I am trying to implement a collision logic, what do you think about my code
 
+### 20-04-2026 13:27
+- **Prompt**: what is delta time and how do I implement it
+
