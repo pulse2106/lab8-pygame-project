@@ -5,8 +5,9 @@ WINDOW_WIDTH = 1680
 WINDOW_HEIGHT = 920
 BACKGROUND_COLOR = (20, 20, 20)
 SQUARE_COLOR = (40, 180, 255)
-SQUARE_COUNT = 50
+SQUARE_COUNT = 25
 FPS = 60
+EPSILLON = 0.00001
 
 class Square:
     def __init__(self) -> None:
@@ -18,14 +19,20 @@ class Square:
         self.vy = self.random_velocity()
         self.jitter_strength = 0.30
         
-    def random_velocity(self):
+    def random_velocity(self) -> float:
         return self.square_speed if random.choice([True, False]) else -  self.square_speed
     
-    def clamp_speed(self):
+    def clamp_speed(self) -> None:
         self.vx = max(-self.max_speed, min(self.vx, self.max_speed))
         self.vy = max(-self.max_speed, min(self.vy, self.max_speed))
 
-    def soft_wall(self):
+    def jitter(self) -> None:
+        self.vx += random.choice([-self.jitter_strength, +self.jitter_strength])
+        self.vy += random.choice([-self.jitter_strength, +self.jitter_strength])
+
+        self.clamp_speed()
+
+    def wall_mech(self) -> None:
         if (self.vector.x <= 0):
             change_in_x = abs(self.vector.x - 0)
             self.vx += change_in_x
@@ -44,14 +51,6 @@ class Square:
 
         self.clamp_speed()
 
-
-    def jitter(self):
-        self.vx += random.choice([-self.jitter_strength, +self.jitter_strength])
-        self.vy += random.choice([-self.jitter_strength, +self.jitter_strength])
-
-        self.clamp_speed()
-
-    def bounce_wall(self):
         if self.vector.x <= 0 or self.vector.x >= WINDOW_WIDTH - self.size:
             self.vx *= -1
             self.vector.x = max(0, min(self.vector.x, WINDOW_WIDTH - self.size))
@@ -60,23 +59,28 @@ class Square:
             self.vy *= -1
             self.vector.y = max(0, min(self.vector.y, WINDOW_HEIGHT - self.size))
 
-    # def collide(self, squares: list[Square]):
-    #     for square in squares:
-    #         if (self == square):
+    # def collide(self, squares: list[Square]) -> None:
+    #     for other in squares:
+    #         if other is self:
     #             continue
-    #         elif (self.vector.x == square.x):
-    #             self.vx *= -1
-    #             return self.vx
-    #         elif (self.vector.y == square.y):
-    #             self.vy *= -1
-    #             return self.vy
+            
+    #         direction = (self.vector - other.vector).normalize()
+    #         size_dif = abs(self.size - other.size)
+    #         repel_force = size_dif/10
+    #         if(self.vector.x == other.vector.x):
+    #             self.vx += direction.x * repel_force
 
-    def run_away(self, squares: list[Square]):
+    #         if (self.vector.y == other.vector.y):
+    #             self.vy += direction.y * repel_force
+
+    def run_away(self, squares: list[Square]) -> None:
         for other in squares:
+            if other is self:
+                continue
             size_dif = abs(self.size - other.size)
             if (self.size < other.size) and (25 < size_dif <= 55):
                 distance = (self.vector - other.vector).length()
-                if distance > 150 or distance < 0.0001:  # Or some small epsilon
+                if distance > 150 or distance < EPSILLON:
                     continue
 
                 direction = (self.vector - other.vector).normalize()
@@ -87,17 +91,22 @@ class Square:
                 self.vy += direction.y * escape_force
 
                 self.clamp_speed()
-    
-    def update(self, squares: list[Square]) -> None:
+
+    def square_actions(self, squares: list[Square]) -> None:
         # self.collide(squares)
         self.run_away(squares)
+
+    def square_movement(self) -> None:
         self.jitter()
         self.vector.x += self.vx
         self.vector.y += self.vy
-        self.soft_wall()
-        self.bounce_wall()
+    
+    def update(self, squares: list[Square]) -> None:
+        self.square_actions(squares)
+        self.square_movement()
+        self.wall_mech()
 
-    def draw(self, win):
+    def draw(self, win) -> None:
         square_rect = pygame.Rect(self.vector.x, self.vector.y, self.size, self.size)
         pygame.draw.rect(win, SQUARE_COLOR, square_rect)
 
