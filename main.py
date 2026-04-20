@@ -13,8 +13,8 @@ CLOCK = pygame.time.Clock()
 
 class Square:
     def __init__(self) -> None:
-        self.size = random.uniform(5, 30)
-        self.max_speed = 2500 / (self.size * 2)
+        self.size = random.uniform(5, 60)
+        self.max_speed = 2500 / (self.size)
         self.square_speed = random.uniform(200, self.max_speed)
         self.vector = pygame.math.Vector2(random.uniform(0, WINDOW_WIDTH - self.size), random.uniform(0, WINDOW_HEIGHT - self.size))
         self.vx = self.random_velocity()
@@ -68,7 +68,7 @@ class Square:
                 continue
 
             size_dif = abs(self.size - other.size)
-            if (self.size < other.size) and (size_dif <= 25):
+            if (self.size < other.size) and (10 < size_dif <= 55):
                 distance = (self.vector - other.vector).length()
                 if distance > 150 or distance < EPSILLON:
                     continue
@@ -80,9 +80,30 @@ class Square:
                 self.vy += direction.y * escape_force
 
                 self.clamp_speed()
+    
+    def chase(self, squares: list["Square"]) -> None:
+        for other in squares:
+            if other is self:
+                continue
+
+            size_dif = abs(self.size - other.size)
+            if (self.size > other.size) and (15 < size_dif <= 55):
+                distance = (self.vector - other.vector).length()
+                if distance > 100 or distance < EPSILLON:
+                    continue
+
+                direction = (other.vector).normalize()
+                chase_force = size_dif
+
+                self.vx += direction.x * chase_force
+                self.vy += direction.y * chase_force
+
+                self.clamp_speed()
 
     def square_actions(self, squares: list["Square"]) -> None:
         self.run_away(squares)
+        # self.collide(squares)
+        self.chase(squares)
 
     def square_movement(self, dt: float) -> None:
         self.jitter()
