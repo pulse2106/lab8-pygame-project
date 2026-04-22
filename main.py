@@ -1,4 +1,5 @@
 import pygame
+import math
 import random
 
 WINDOW_WIDTH = 1680
@@ -21,12 +22,28 @@ class Square:
         self.vy = self.random_velocity()
         self.jitter_strength = 0.30
 
+    def rect(self) -> pygame.Rect:
+        square_rect = pygame.Rect(self.vector.x, self.vector.y, self.size, self.size)
+        return square_rect
+    
+    def draw(self, win):
+        pygame.draw.rect(win, SQUARE_COLOR, self.rect())
+
+    def centerx(self) -> float:
+        return self.rect().centerx
+    
+    def centery(self) -> float:
+        return self.rect().centery
+
     def random_velocity(self) -> float:
         return self.square_speed if random.choice([True, False]) else -self.square_speed
 
     def clamp_speed(self) -> None:
         self.vx = max(-self.max_speed, min(self.vx, self.max_speed))
         self.vy = max(-self.max_speed, min(self.vy, self.max_speed))
+
+    def life_span(self) -> None:
+        pass
 
     def jitter(self) -> None:
         self.vx += random.choice([-self.jitter_strength, self.jitter_strength])
@@ -48,76 +65,77 @@ class Square:
             self.vy *= -1
             self.vector.y = WINDOW_HEIGHT - self.size
 
-    # def collide(self, squares: list[Square]) -> None:
-    #     for other in squares:
-    #         if other is self:
-    #             continue
+    def find_threat_prey(self, squares: list[Square]) -> tuple[Square | None, Square | None]:
+        
+        def distance(other: Square) -> float:
+            return ((other.centerx() - self.centerx())**2 + (other.centery() - self.centerx())**2)
+        
+        threat = None
+        min_threat_distance = math.inf
+        prey = None
+        min_prey_distance = math.inf
+
+        for other in squares:
+            if other is self:
+                continue
+            dist = distance(other)
+            if other.size > self.size and dist < min_threat_distance:
+                threat, min_threat_distance = other, dist
             
-    #         direction = (self.vector - other.vector).normalize()
-    #         size_dif = abs(self.size - other.size)
-    #         repel_force = size_dif/10
-    #         if(self.vector.x == other.vector.x):
-    #             self.vx += direction.x * repel_force
+            elif other.size < self.size and dist < min_prey_distance:
+                prey, min_prey_distance = other, dist
 
-    #         if (self.vector.y == other.vector.y):
-    #             self.vy += direction.y * repel_force
+        return threat, prey
 
-    def run_away(self, squares: list["Square"]) -> None:
-        for other in squares:
-            if other is self:
-                continue
+    def move_vect(self, threat: Square | None, prey: Square | None) -> pygame.Vector2:
+        run_vect = pygame.Vector2()
+        chase_vect = pygame.Vector2()
+        danger = 0.5
 
-            size_dif = abs(self.size - other.size)
-            if (self.size < other.size) and (10 < size_dif <= 55):
-                distance = (self.vector - other.vector).length()
-                if distance > 150 or distance < EPSILLON:
-                    continue
+        if threat:
+            run_vect = pygame.math.Vector2((self.vector.x - threat.vector.x), (self.vector.y - threat.vector.y))
+            movement_force = threat.size / 10
 
-                direction = (self.vector - other.vector).normalize()
-                escape_force = size_dif / 10
+            dist = run_vect.length_squared()
+            danger = (movement_force * (threat.size * threat.size)/(dist + EPSILLON))
+            if danger > 1:
+                danger = 1
+            else:
+                danger = 0
 
-                self.vx += direction.x * escape_force
-                self.vy += direction.y * escape_force
+        if prey:
+            chase_vect = pygame.Vector2((self.vector.x - prey.vector.x), (self.vector.y - prey.vector.y))
 
-                self.clamp_speed()
-    
-    def chase(self, squares: list["Square"]) -> None:
-        for other in squares:
-            if other is self:
-                continue
+        prey_dist = chase_vect.length()
+        threat_dist = run_vect.length()
+        if prey_dist:
+            chase_vect = chase_vect.normalize()
+        elif threat_dist:
+            run_vect.normalize()
 
-            size_dif = abs(self.size - other.size)
-            if (self.size > other.size) and (15 < size_dif <= 55):
-                distance = (self.vector - other.vector).length()
-                if distance > 100 or distance < EPSILLON:
-                    continue
+        movement_vect = chase_vect + run_vect
+        if movement_vect.length():
+            movement_vect.normalize()
 
-                direction = (other.vector).normalize()
-                chase_force = size_dif
+        return ((1 - danger) * self.vector) + (danger * movement_vect)
 
-                self.vx += direction.x * chase_force
-                self.vy += direction.y * chase_force
+    def square_run_chase(self, squares: list[Square]) -> None:
+        threat, prey = self.find_threat_prey(squares)
+        movement_vect = self.move_vect(threat, prey)
+        self.vx += movement_vect.x
+        self.vy += movement_vect.y
 
-                self.clamp_speed()
-
-    def square_actions(self, squares: list["Square"]) -> None:
-        self.run_away(squares)
-        # self.collide(squares)
-        self.chase(squares)
+        self.clamp_speed()
 
     def square_movement(self, dt: float) -> None:
         self.jitter()
         self.vector.x += self.vx * dt
         self.vector.y += self.vy * dt
 
-    def update(self, squares: list["Square"], dt: float) -> None:
-        self.square_actions(squares)
+    def update(self, squares: list[Square], dt: float) -> None:
+        self.square_run_chase(squares)
         self.square_movement(dt)
         self.wall_mech()
-
-    def draw(self, win) -> None:
-        square_rect = pygame.Rect(self.vector.x, self.vector.y, self.size, self.size)
-        pygame.draw.rect(win, SQUARE_COLOR, square_rect)
 
 def draw_scene(win: pygame.Surface, squares: list[Square]) -> None:
     """Render the current frame."""
