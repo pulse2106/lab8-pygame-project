@@ -18,7 +18,7 @@ This project is a small Pygame simulation where multiple colored squares move ar
 Install the dependency with:
 
 ```bash
-pip install pygame
+pip install pygame-ce
 ```
 
 ## Run the Project
