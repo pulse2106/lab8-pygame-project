@@ -273,3 +273,14 @@
 - **Hook Version**: 1.02
 - **Date**: 23-04-2026 20:19
 - **Prompt**: generate a readme
+
+### **New Interaction**
+- **Agent Version**: 2.3
+- **Date**: 23-04-2026 20:20
+- **User**: success.aderibigbe@epita.fr
+- **Prompt**: generate a readme
+- **CoPilot Mode**: Edit
+- **CoPilot Model**: GPT-5.4 mini
+- **Socratic Mode**: ON
+- **Changes Made**: Created README.md documenting the Pygame simulation setup, controls, structure, and runtime behavior.
+- **Context and Reasons for Changes**: User requested a README, so I added a concise project overview that matches the current main.py behavior and repository layout.
