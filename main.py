@@ -2,25 +2,25 @@ import pygame
 import math
 import random
 
-WINDOW_WIDTH = 1680
-WINDOW_HEIGHT = 920
-BACKGROUND_COLOR = (20, 20, 20)
-SQUARE_COLOR = (40, 180, 255)
-SQUARE_COUNT = 25
-FPS = 60
-EPSILLON = 0.00001
+WINDOW_WIDTH : int = 1680
+WINDOW_HEIGHT : int = 920
+BACKGROUND_COLOR : tuple = (20, 20, 20)
+SQUARE_COLOR : tuple = (40, 180, 255)
+SQUARE_COUNT : int = 25
+FPS : int = 60
+EPSILLON : float = 0.00001
 
-CLOCK = pygame.time.Clock()
-
-class Square:
+class Square: 
     def __init__(self) -> None:
         self.size = random.uniform(5, 60)
         self.max_speed = 2500 / (self.size)
         self.square_speed = random.uniform(200, self.max_speed)
         self.vector = pygame.math.Vector2(random.uniform(0, WINDOW_WIDTH - self.size), random.uniform(0, WINDOW_HEIGHT - self.size))
-        self.vx = self.random_velocity()
-        self.vy = self.random_velocity()
-        self.jitter_strength = 0.30
+        self.movement_vect = pygame.Vector2(self.random_velocity(), self.random_velocity())
+        self.center = pygame.Vector2((self.vector.x + self.size / 2), (self.vector.y + self.size / 2))
+        self.direction_vect = self.movement_vect.normalize()
+        self.jitter_strength = 20
+        self.life = 5
 
     def rect(self) -> pygame.Rect:
         square_rect = pygame.Rect(self.vector.x, self.vector.y, self.size, self.size)
@@ -29,46 +29,50 @@ class Square:
     def draw(self, win):
         pygame.draw.rect(win, SQUARE_COLOR, self.rect())
 
-    def centerx(self) -> float:
-        return self.rect().centerx
-    
-    def centery(self) -> float:
-        return self.rect().centery
-
     def random_velocity(self) -> float:
         return self.square_speed if random.choice([True, False]) else -self.square_speed
 
     def clamp_speed(self) -> None:
-        self.vx = max(-self.max_speed, min(self.vx, self.max_speed))
-        self.vy = max(-self.max_speed, min(self.vy, self.max_speed))
+        self.movement_vect.x = max(-self.max_speed, min(self.movement_vect.x, self.max_speed))
+        self.movement_vect.y = max(-self.max_speed, min(self.movement_vect.y, self.max_speed))
 
-    def life_span(self) -> None:
-        pass
+    # def alive(self, alive_squares: list[Square]) -> list[Square] :
+    #     alive_squares.append(self)
+    #     return alive_squares
+
+    # def life_rebirth(self, alive_squares: list[Square]) -> list[Square | None]:
+    #     if (self.life - 1) == 0:
+    #         dead_square.append(self)
+    #         return dead_square
+    #     elif self in alive_squares and self.life > 5:
+    #         self.life -= 1
+    #         return alive_squares
 
     def jitter(self) -> None:
-        self.vx += random.choice([-self.jitter_strength, self.jitter_strength])
-        self.vy += random.choice([-self.jitter_strength, self.jitter_strength])
+        self.movement_vect += pygame.Vector2(random.choice([-self.jitter_strength, self.jitter_strength]), random.choice([-self.jitter_strength, self.jitter_strength]))
         self.clamp_speed()
 
     def wall_mech(self) -> None:
         if self.vector.x <= 0:
-            self.vx *= -1
+            self.movement_vect.x *= -1
             self.vector.x = 0
         elif self.vector.x >= WINDOW_WIDTH - self.size:
-            self.vx *= -1
+            self.movement_vect.x *= -1
             self.vector.x = WINDOW_WIDTH - self.size
 
         if self.vector.y <= 0:
-            self.vy *= -1
+            self.movement_vect.y *= -1
             self.vector.y = 0
         elif self.vector.y >= WINDOW_HEIGHT - self.size:
-            self.vy *= -1
+            self.movement_vect.y *= -1
             self.vector.y = WINDOW_HEIGHT - self.size
 
+    """NOTE: THIS PIECE OF CODE WAS INSPIRED BY ARTEM, I ADDED A FUNCTION IN OTHE TO MAKE USE OF THE INBUILT CENTER FUNCTION
+    INHERITING FROM RECT CLASS WOULD BE NICE BUT IT WILL REQUIRE TOO MUCH WORK"""
     def find_threat_prey(self, squares: list[Square]) -> tuple[Square | None, Square | None]:
         
         def distance(other: Square) -> float:
-            return ((other.centerx() - self.centerx())**2 + (other.centery() - self.centerx())**2)
+            return ((other.center.x - self.center.x)**2 + (other.center.y - self.center.x)**2)
         
         threat = None
         min_threat_distance = math.inf
@@ -119,52 +123,67 @@ class Square:
 
         return ((1 - danger) * self.vector) + (danger * movement_vect)
 
-    def square_run_chase(self, squares: list[Square]) -> None:
+    def square_run_chase(self, squares: list[Square], dt: float) -> None:
         threat, prey = self.find_threat_prey(squares)
-        movement_vect = self.move_vect(threat, prey)
-        self.vx += movement_vect.x
-        self.vy += movement_vect.y
+        dodging_vect = self.move_vect(threat, prey)
+        self.movement_vect += dodging_vect * dt
 
         self.clamp_speed()
 
     def square_movement(self, dt: float) -> None:
         self.jitter()
-        self.vector.x += self.vx * dt
-        self.vector.y += self.vy * dt
+        self.vector += self.movement_vect * dt
 
     def update(self, squares: list[Square], dt: float) -> None:
-        self.square_run_chase(squares)
+        self.square_run_chase(squares, dt)
         self.square_movement(dt)
         self.wall_mech()
+
+        self.center = pygame.Vector2((self.vector.x + self.size)/2, (self.vector.y + self.size)/2)
 
 def draw_scene(win: pygame.Surface, squares: list[Square]) -> None:
     """Render the current frame."""
     win.fill(BACKGROUND_COLOR)
     for square in squares:
         square.draw(win)
-    pygame.display.flip()
+
+def handle_event() -> bool:
+    """Handle input events and return False when the app should exit."""
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            return False
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+            return False
+    return True
+
+def draw_text(text: str, font: pygame.font.Font, text_col, x: int, y: int, screen: pygame.Surface):
+    """Render a single text label at the given screen position."""
+    img = font.render(text, True, text_col)
+    screen.blit(img, (x, y))
 
 # infinite loop
 def main() -> None:
     pygame.init()
     win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    # setting title to the window
     pygame.display.set_caption("Moving Squares")
+    text_font = pygame.font.Font(None, 30)
+    clock = pygame.time.Clock()
 
     squares = [Square() for _ in range(SQUARE_COUNT)]
 
     run = True
     while run:
-        dt = CLOCK.tick(FPS)/1000
-        pygame.font.Font().render(f"FPS = {dt}", True, (0,0,0), None)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
+        dt = clock.tick(FPS)/1000
+        run = handle_event()
 
         for square in squares:
             square.update(squares, dt)
         draw_scene(win, squares)
+
+        draw_text(f"FPS: {int(clock.get_fps())}", text_font, (255, 255, 255), 20, 10, win)
+        draw_text("Press q to exit", text_font, (255, 255, 255), 20, 40, win)
+
+        pygame.display.flip()
         
     pygame.quit()
 
