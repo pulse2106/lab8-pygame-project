@@ -1,17 +1,18 @@
 import pygame
 import math
 import random
+import time
 
 WINDOW_WIDTH : int = 1680
 WINDOW_HEIGHT : int = 920
 BACKGROUND_COLOR : tuple = (20, 20, 20)
 SQUARE_COLOR : tuple = (40, 180, 255)
-SQUARE_COUNT : int = 25
+SQUARE_COUNT : int = 10
 FPS : int = 60
 EPSILLON : float = 0.00001
 
 class Square: 
-    def __init__(self) -> None:
+    def __init__(self, alive) -> None:
         self.size = random.uniform(5, 60)
         self.max_speed = 2500 / (self.size)
         self.square_speed = random.uniform(200, self.max_speed)
@@ -20,7 +21,9 @@ class Square:
         self.center = pygame.Vector2((self.vector.x + self.size / 2), (self.vector.y + self.size / 2))
         self.direction_vect = self.movement_vect.normalize()
         self.jitter_strength = 20
-        self.life = 5
+        self.birth_time = time.time()
+        self.life_span = random.randint(30, 60)
+        self.alive = alive
 
     def rect(self) -> pygame.Rect:
         square_rect = pygame.Rect(self.vector.x, self.vector.y, self.size, self.size)
@@ -35,18 +38,6 @@ class Square:
     def clamp_speed(self) -> None:
         self.movement_vect.x = max(-self.max_speed, min(self.movement_vect.x, self.max_speed))
         self.movement_vect.y = max(-self.max_speed, min(self.movement_vect.y, self.max_speed))
-
-    # def alive(self, alive_squares: list[Square]) -> list[Square] :
-    #     alive_squares.append(self)
-    #     return alive_squares
-
-    # def life_rebirth(self, alive_squares: list[Square]) -> list[Square | None]:
-    #     if (self.life - 1) == 0:
-    #         dead_square.append(self)
-    #         return dead_square
-    #     elif self in alive_squares and self.life > 5:
-    #         self.life -= 1
-    #         return alive_squares
 
     def jitter(self) -> None:
         self.movement_vect += pygame.Vector2(random.choice([-self.jitter_strength, self.jitter_strength]), random.choice([-self.jitter_strength, self.jitter_strength]))
@@ -141,6 +132,19 @@ class Square:
 
         self.center = pygame.Vector2((self.vector.x + self.size)/2, (self.vector.y + self.size)/2)
 
+def alive(squares: list[Square], die: pygame.Sound) -> list[Square]:
+    """Remove expired squares based on lifespan."""
+    squares[:] = [square for square in squares if time.time() - square.birth_time < square.life_span]
+    return squares
+
+def reborn(squares: list[Square], revive: pygame.Sound) -> list[Square]:
+    """Respawn squares until the world reaches SQUARE_COUNT."""
+    while len(squares) < SQUARE_COUNT:
+        alive = False
+        squares.append(Square(alive))
+        revive.play()
+    return squares
+
 def draw_scene(win: pygame.Surface, squares: list[Square]) -> None:
     """Render the current frame."""
     win.fill(BACKGROUND_COLOR)
@@ -161,27 +165,36 @@ def draw_text(text: str, font: pygame.font.Font, text_col, x: int, y: int, scree
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
 
+def update_window(squares: list[Square], dt: float, die: pygame.Sound, revive: pygame.Sound):
+    squares = alive(squares, die)
+    squares = reborn(squares, revive)
+    for square in squares:
+        square.update(squares, dt)
+
 # infinite loop
 def main() -> None:
     pygame.init()
+    pygame.mixer.init()
+    revive = pygame.mixer.Sound("revive.mp3")
+    die = pygame.mixer.Sound("death.mp3")
     win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption("Moving Squares")
     text_font = pygame.font.Font(None, 30)
     clock = pygame.time.Clock()
 
-    squares = [Square() for _ in range(SQUARE_COUNT)]
+    squares = [Square(True) for _ in range(SQUARE_COUNT)]
 
     run = True
     while run:
         dt = clock.tick(FPS)/1000
         run = handle_event()
 
-        for square in squares:
-            square.update(squares, dt)
+        update_window(squares, dt, die, revive)
         draw_scene(win, squares)
 
         draw_text(f"FPS: {int(clock.get_fps())}", text_font, (255, 255, 255), 20, 10, win)
         draw_text("Press q to exit", text_font, (255, 255, 255), 20, 40, win)
+        draw_text(f"Number of Squares: {SQUARE_COUNT}", text_font, (255, 255, 255), 20, 70, win)
 
         pygame.display.flip()
         
