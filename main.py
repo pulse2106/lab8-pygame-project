@@ -213,6 +213,13 @@ def draw_text(text: str, font: pygame.font.Font, text_col, x: int, y: int, scree
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
 
+def draw_squares() -> list[Square]:
+    squares = []
+    for _ in range(SQUARE_COUNT):
+        alive = True
+        squares.append(Square(True))
+    return squares
+
 def update_window(squares: list[Square], dt: float, die: pygame.Sound, revive: pygame.Sound):
     squares = alive(squares, die)
     squares = reborn(squares, revive)
@@ -230,7 +237,7 @@ def main() -> None:
     text_font = pygame.font.Font(None, 30)
     clock = pygame.time.Clock()
 
-    squares = [Square(True) for _ in range(SQUARE_COUNT)]
+    squares = draw_squares()
 
     run = True
     while run:
