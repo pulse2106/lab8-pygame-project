@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecture - Pygame Squares</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --surface: #ffffff;
+      --text: #172033;
+      --muted: #4d5b78;
+      --accent: #1f6feb;
+      --border: #d8e0ef;
+      --shadow: 0 10px 30px rgba(20, 40, 80, 0.08);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 5% 5%, rgba(31, 111, 235, 0.08), transparent 25%),
+        radial-gradient(circle at 95% 10%, rgba(18, 160, 133, 0.08), transparent 22%),
+        var(--bg);
+      line-height: 1.6;
+    }
+
+    .container {
+      width: min(1100px, 94vw);
+      margin: 0 auto;
+      padding: 28px 0 44px;
+    }
+
+    .hero, .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    h1, h2 {
+      margin-top: 0;
+      line-height: 1.2;
+    }
+
+    h1 { font-size: clamp(1.8rem, 3vw, 2.4rem); }
+    h2 { font-size: 1.2rem; margin-bottom: 10px; }
+
+    p { margin: 0 0 10px; color: var(--muted); }
+
+    .diagram {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fbfdff;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .chip {
+      border: 1px solid var(--border);
+      background: #eef4ff;
+      color: #123769;
+      border-radius: 999px;
+      padding: 6px 11px;
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 700px) {
+      .hero, .section { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <h1>Pygame Squares Architecture</h1>
+      <p>This page documents the architecture currently implemented in <strong>main.py</strong>. It reflects only source-observable behavior.</p>
+      <div class="meta">
+        <span class="chip">Single-file app</span>
+        <span class="chip">Pygame runtime loop</span>
+        <span class="chip">Entity update + render</span>
+        <span class="chip">In-memory state</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Module Dependency Graph</h2>
+      <div class="diagram mermaid">
+flowchart LR
+    subgraph "Application Module"
+        MAIN["main.py"]
+        CLASS["Square Class"]
+        F_MAIN["main()"]
+        F_LOOP["update_window()"]
+        F_DRAW["draw_scene()"]
+        F_INPUT["handle_event()"]
+    end
+
+    PYGAME["pygame"]
+    MATH["math"]
+    RANDOM["random"]
+    TIME["time"]
+
+    MAIN --> CLASS
+    MAIN --> F_MAIN
+    MAIN --> F_LOOP
+    MAIN --> F_DRAW
+    MAIN --> F_INPUT
+
+    MAIN --> PYGAME
+    MAIN --> MATH
+    MAIN --> RANDOM
+    MAIN --> TIME
+
+    CLASS --> PYGAME
+    CLASS --> MATH
+    CLASS --> RANDOM
+    CLASS --> TIME
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>High-Level Runtime/System Flow</h2>
+      <div class="diagram mermaid">
+flowchart TD
+    START["Program Start"] --> INIT["Initialize Pygame and Mixer"]
+    INIT --> ASSETS["Load Sound Assets"]
+    ASSETS --> WINDOW["Create Window and Clock"]
+    WINDOW --> SPAWN["Create Initial Squares"]
+    SPAWN --> LOOP["Main Loop"]
+
+    LOOP --> TICK["Compute Delta Time with clock.tick(FPS)"]
+    TICK --> INPUT["Handle Input Events"]
+    INPUT -->|"Exit Requested"| EXIT["Quit Pygame"]
+    INPUT -->|"Continue"| UPDATE["Update Simulation State"]
+
+    UPDATE --> RENDER["Draw Scene and HUD Text"]
+    RENDER --> FLIP["Flip Display Buffer"]
+    FLIP --> LOOP
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Function-Level Call Graph</h2>
+      <div class="diagram mermaid">
+flowchart TB
+    subgraph "Top-Level Functions"
+        MAIN["main()"]
+        HANDLE["handle_event()"]
+        UPDATE_WIN["update_window(squares, dt, die, revive)"]
+        ALIVE_FN["alive(squares, die)"]
+        REBORN_FN["reborn(squares, revive)"]
+        DRAW_SCENE["draw_scene(win, squares)"]
+        DRAW_TEXT["draw_text(...)"]
+    end
+
+    subgraph "Square Methods"
+        SQ_UPDATE["Square.update(squares, dt)"]
+        SQ_AGE["Square.aging_effects()"]
+        SQ_RUN["Square.square_run_chase(squares, dt)"]
+        SQ_FIND["Square.find_threat_prey(squares)"]
+        SQ_MOVEV["Square.move_vect(threat, prey)"]
+        SQ_CLAMP["Square.clamp_speed()"]
+        SQ_MOVE["Square.square_movement(dt)"]
+        SQ_JITTER["Square.jitter(dt)"]
+        SQ_WALL["Square.wall_mech()"]
+        SQ_DRAW["Square.draw(win)"]
+        SQ_RECT["Square.rect()"]
+        SQ_CX["Square.centerx()"]
+        SQ_CY["Square.centery()"]
+    end
+
+    MAIN --> HANDLE
+    MAIN --> UPDATE_WIN
+    MAIN --> DRAW_SCENE
+    MAIN --> DRAW_TEXT
+
+    UPDATE_WIN --> ALIVE_FN
+    UPDATE_WIN --> REBORN_FN
+    UPDATE_WIN --> SQ_UPDATE
+
+    DRAW_SCENE --> SQ_DRAW
+    SQ_DRAW --> SQ_RECT
+
+    SQ_UPDATE --> SQ_AGE
+    SQ_UPDATE --> SQ_RUN
+    SQ_UPDATE --> SQ_MOVE
+    SQ_UPDATE --> SQ_WALL
+
+    SQ_RUN --> SQ_FIND
+    SQ_RUN --> SQ_MOVEV
+    SQ_RUN --> SQ_CLAMP
+
+    SQ_MOVE --> SQ_JITTER
+
+    SQ_FIND --> SQ_CX
+    SQ_FIND --> SQ_CY
+    SQ_CX --> SQ_RECT
+    SQ_CY --> SQ_RECT
+
+    SQ_JITTER --> SQ_CLAMP
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Primary Execution Path Sequence</h2>
+      <div class="diagram mermaid">
+sequenceDiagram
+    participant BOOT as "Program Bootstrap"
+    participant LOOP as "Main Loop"
+    participant INPUT as "Input Handler"
+    participant WORLD as "World Updater"
+    participant LIFE as "Lifecycle Manager"
+    participant ENTITY as "Square Entity"
+    participant RENDER as "Renderer"
+    participant DISPLAY as "Display System"
+
+    BOOT->>BOOT: "pygame.init() and pygame.mixer.init()"
+    BOOT->>BOOT: "Load revive.mp3 and death.mp3"
+    BOOT->>DISPLAY: "Create window and set caption"
+    BOOT->>LOOP: "Initialize clock, font, and square list"
+
+    loop "Each Frame While run is True"
+        LOOP->>LOOP: "dt = clock.tick(FPS) / 1000"
+        LOOP->>INPUT: "handle_event()"
+
+        alt "Quit Event or Q Key"
+            INPUT-->>LOOP: "False"
+            LOOP->>DISPLAY: "pygame.quit()"
+        else "Continue Simulation"
+            INPUT-->>LOOP: "True"
+            LOOP->>WORLD: "update_window(squares, dt, die, revive)"
+            WORLD->>LIFE: "alive(squares, die)"
+            LIFE-->>WORLD: "filtered survivors"
+            WORLD->>LIFE: "reborn(squares, revive)"
+            LIFE-->>WORLD: "replenished list"
+
+            loop "For Each Square"
+                WORLD->>ENTITY: "square.update(squares, dt)"
+                ENTITY->>ENTITY: "aging_effects()"
+                ENTITY->>ENTITY: "square_run_chase()"
+                ENTITY->>ENTITY: "square_movement()"
+                ENTITY->>ENTITY: "wall_mech()"
+            end
+
+            LOOP->>RENDER: "draw_scene(win, squares)"
+            RENDER->>ENTITY: "square.draw(win) for each square"
+            LOOP->>RENDER: "draw_text() for FPS, controls, count"
+            LOOP->>DISPLAY: "pygame.display.flip()"
+        end
+    end
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "default", securityLevel: "strict" });
+  </script>
+</body>
+</html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pygame Moving Squares Architecture</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a2d;
+      --panel-2: #17213a;
+      --text: #e8eefc;
+      --muted: #aeb9d6;
+      --accent: #7dd3fc;
+      --accent-2: #f9a8d4;
+      --border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      font-family: "Avenir Next", "Segoe UI", "Trebuchet MS", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(125, 211, 252, 0.15), transparent 28%),
+        radial-gradient(circle at 85% 15%, rgba(249, 168, 212, 0.14), transparent 24%),
+        linear-gradient(180deg, #08101f 0%, #0b1020 45%, #050814 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 18px 54px;
+    }
+
+    .hero {
+      background: linear-gradient(180deg, rgba(18, 26, 45, 0.92), rgba(13, 19, 34, 0.95));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: 28px;
+      padding: 28px;
+      margin-bottom: 22px;
+    }
+
+    h1, h2, h3 { margin: 0 0 12px; line-height: 1.15; }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      letter-spacing: -0.04em;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      color: #dcfce7;
+      margin-top: 28px;
+    }
+
+    h3 {
+      font-size: 1rem;
+      color: var(--accent);
+    }
+
+    p { margin: 0 0 12px; color: var(--text); }
+
+    .lead { color: var(--muted); max-width: 72ch; }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(125, 211, 252, 0.12);
+      border: 1px solid rgba(125, 211, 252, 0.22);
+      color: #dff6ff;
+      font-size: 0.9rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(18, 26, 45, 0.95), rgba(11, 16, 32, 0.96));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .full { grid-column: 1 / -1; }
+    .half { grid-column: span 6; }
+
+    @media (max-width: 860px) {
+      .half { grid-column: 1 / -1; }
+      .hero { padding: 20px; }
+    }
+
+    ul { margin: 10px 0 0; padding-left: 20px; }
+    li { margin: 6px 0; color: var(--text); }
+
+    code {
+      background: rgba(125, 211, 252, 0.10);
+      border: 1px solid rgba(125, 211, 252, 0.16);
+      padding: 0.12rem 0.34rem;
+      border-radius: 6px;
+      color: #dff6ff;
+      font-size: 0.94em;
+    }
+
+    .diagram {
+      overflow-x: auto;
+      border-radius: 14px;
+      background: #0c1324;
+      border: 1px solid var(--border);
+      padding: 16px;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.92rem;
+      border-left: 3px solid var(--accent-2);
+      padding-left: 12px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      display: inline-block;
+      margin-right: 8px;
+      margin-top: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(249, 168, 212, 0.12);
+      border: 1px solid rgba(249, 168, 212, 0.22);
+      color: #fde7f4;
+      font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Pygame Moving Squares Architecture</h1>
+      <p class="lead">A fresh architecture summary for the current repository. The design centers on a single file application in <code>main.py</code> with one domain class, a few top-level helpers, and a frame-based runtime loop.</p>
+      <div class="pill-row">
+        <span class="pill">Single-process simulation</span>
+        <span class="pill">Real-time update loop</span>
+        <span class="pill">Entity-driven behavior</span>
+        <span class="pill">Delta-time movement</span>
+        <span class="pill">No persistence</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card full">
+        <h2>System View</h2>
+        <p>The application creates a window, loads audio, spawns squares, and then repeats a simple update-render cycle until the user quits.</p>
+        <ul>
+          <li><code>main()</code> owns initialization and the loop.</li>
+          <li><code>Square</code> owns motion, interaction, and appearance state.</li>
+          <li>Helper functions handle input, lifetime management, drawing, and HUD text.</li>
+        </ul>
+      </article>
+
+      <article class="card half">
+        <h2>Component Diagram</h2>
+        <div class="diagram mermaid">
+flowchart TD
+  A[main] --> B[Initialize Pygame]
+  B --> C[Load assets]
+  C --> D[Create window]
+  D --> E[Spawn squares]
+  E --> F[Game loop]
+  F --> G[handle_event]
+  F --> H[update_window]
+  F --> I[draw_scene]
+  F --> J[draw_text]
+  H --> K[alive]
+  H --> L[reborn]
+  H --> M[Square.update]
+  M --> N[aging_effects]
+  M --> O[square_run_chase]
+  M --> P[square_movement]
+  M --> Q[wall_mech]
+        </div>
+      </article>
+
+      <article class="card half">
+        <h2>Frame Sequence</h2>
+        <div class="diagram mermaid">
+sequenceDiagram
+  participant Loop as Main Loop
+  participant Input as handle_event
+  participant World as update_window
+  participant Entity as Square
+  participant Render as draw_scene
+
+  Loop->>Input: poll events
+  Input-->>Loop: continue or quit
+  Loop->>World: update_window(squares, dt, die, revive)
+  World->>World: alive()
+  World->>World: reborn()
+  World->>Entity: update(squares, dt)
+  Entity->>Entity: aging_effects()
+  Entity->>Entity: square_run_chase()
+  Entity->>Entity: square_movement(dt)
+  Entity->>Entity: wall_mech()
+  Loop->>Render: draw_scene(win, squares)
+  Loop->>Loop: draw_text() and display.flip()
+        </div>
+      </article>
+
+      <article class="card full">
+        <h2>Behavior Model</h2>
+        <div class="grid">
+          <div class="half card" style="box-shadow:none; margin:0;">
+            <h3>State</h3>
+            <ul>
+              <li><code>vector</code> stores position.</li>
+              <li><code>movement_vect</code> stores velocity.</li>
+              <li><code>size</code>, <code>max_speed</code>, and <code>square_speed</code> define motion limits.</li>
+              <li><code>birth_time</code> and <code>life_span</code> control lifecycle changes.</li>
+              <li><code>current_color</code> changes as a square ages.</li>
+            </ul>
+          </div>
+          <div class="half card" style="box-shadow:none; margin:0;">
+            <h3>Steering</h3>
+            <ul>
+              <li><code>find_threat_prey()</code> scans nearby squares and picks the closest larger or smaller neighbor.</li>
+              <li><code>move_vect()</code> merges chase, escape, and wall push forces.</li>
+              <li><code>jitter()</code> adds random movement variation.</li>
+              <li><code>clamp_speed()</code> prevents velocity from becoming too large.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note">The code is deliberately compact, but the pairwise neighbor scan means the interaction cost grows quickly as the square count increases.</p>
+      </article>
+
+      <article class="card half">
+        <h2>Data Flow</h2>
+        <ul>
+          <li>User input decides whether the loop continues.</li>
+          <li><code>clock.tick(FPS)</code> produces the frame delta time.</li>
+          <li>Lifecycle helpers remove dead squares and create new ones.</li>
+          <li>Each square updates itself using the latest list of squares.</li>
+          <li>The renderer draws the current state and then flips the display.</li>
+        </ul>
+      </article>
+
+      <article class="card half">
+        <h2>Design Notes</h2>
+        <span class="tag">Easy to read</span>
+        <span class="tag">Good for experiments</span>
+        <span class="tag">Monolithic script</span>
+        <span class="tag">O(n^2) neighbor checks</span>
+        <ul>
+          <li>The current structure is friendly for beginners because each responsibility is visible in one place.</li>
+          <li>As the simulation grows, splitting rendering, simulation, and bootstrap code would improve maintainability.</li>
+          <li>A spatial grid would reduce the cost of threat/prey searching.</li>
+        </ul>
+      </article>
+
+      <article class="card full">
+        <h2>Suggested Next Steps</h2>
+        <ul>
+          <li>Move <code>Square</code> into a dedicated module if the project expands.</li>
+          <li>Extract initialization into a setup function for clarity.</li>
+          <li>Add a deterministic seed option for reproducible tests.</li>
+          <li>Replace the full-list neighbor scan with a grid or bucket system.</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+  </script>
+</body>
+</html>

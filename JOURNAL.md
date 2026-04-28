@@ -422,3 +422,14 @@
 - **Hook Version**: 1.02
 - **Date**: 27-04-2026 11:50
 - **Prompt**: implement the refactoring plan in refactoring.plan.md
+
+### **New Interaction**
+- **Agent Version**: 2.3
+- **Date**: 27-04-2026 11:53
+- **User**: success.aderibigbe@epita.fr
+- **Prompt**: implement the refactoring plan in refactoring.plan.md
+- **CoPilot Mode**: Agent
+- **CoPilot Model**: GPT-5.3-Codex
+- **Socratic Mode**: ON
+- **Changes Made**: Refactored main.py according to refactoring.plan.md with naming cleanup, helper extraction, removed redundant state, safer normalization and lifespan handling, and stronger type hints while preserving behavior.
+- **Context and Reasons for Changes**: User requested direct implementation of the plan; updates prioritized readability and maintainability for beginner students with concise inline comments explaining why each change helps.
