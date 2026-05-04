@@ -91,9 +91,19 @@ class Boid:
     # Explanation: For each nearby boid, calculate a vector pointing away from it, 
     # inversely proportional to the distance. 
     # Then sum these vectors to get the overall separation steering force.
-    def _separation(self, boids: List['Boid']) -> pygame.Vector2:
+    def _separation(self, boids: List['Boid']):
         steer : pygame.Vector2 = pygame.Vector2(0, 0)
-        return steer
+        for other in boids:
+            if self is other:
+                continue
+
+            steer.x += 4.0
+            steer.y += 4.0
+
+            self.vx += self.speed * steer.x
+            self.vy += self.speed * steer.y
+
+        # return steer
 
     # Alignment: steer toward the average direction of nearby boids: 
     # _alignment returns a vector pointing in the average direction of nearby boids
@@ -138,6 +148,8 @@ class Boid:
             self._screen_bounce()
         else:   
             self._screen_wrap()
+
+        self._separation(boids)
 
 
     # Draw boid as a triangle pointing in the direction of velocity
