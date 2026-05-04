@@ -36,7 +36,7 @@ class Config:
     # Wall warp or bounce
     WALL_BEHAVIOR: str = "bounce"  # "wrap" or "bounce"
 
-
+    WALL_MARGIN: int = 75
 
 config = Config()
 
@@ -59,7 +59,28 @@ class Boid:
     # Screen wrapping: if a boid goes off one edge of the screen, 
     # it should reappear on the opposite edge
     def _screen_wrap(self) -> None:
-        pass
+        wall_push = pygame.Vector2()
+
+        if self.x < config.WALL_MARGIN:
+            wall_push.x = 1
+        elif self.x > config.WIDTH - config.BOID_SIZE - config.WALL_MARGIN:
+            wall_push.x = -1
+
+        if self.y < config.WALL_MARGIN:
+            wall_push.y = 1
+        elif self.y > config.HEIGHT - config.BOID_SIZE - config.WALL_MARGIN:
+            wall_push.y = -1
+
+        if self.x < config.BOID_SIZE or self.x > config.WIDTH - config.BOID_SIZE:
+            self.vx = -self.vx
+            self.x = max(config.BOID_SIZE, min(self.x, config.WIDTH - config.BOID_SIZE))
+        if self.y < config.BOID_SIZE or self.y > config.HEIGHT - config.BOID_SIZE:
+            self.vy = -self.vy
+            self.y = max(config.BOID_SIZE, min(self.y, config.HEIGHT - config.BOID_SIZE))
+
+        if wall_push.length_squared() > 0:
+            self.vx += wall_push.x * 30
+            self.vy += wall_push.y * 30
     
     # Default wall behavior is bounce: if a boid hits the edge of the screen, 
     # it should bounce back in the opposite direction
