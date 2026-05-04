@@ -9,6 +9,8 @@ BACKGROUND_COLOR: tuple[int, int, int] = (20, 20, 20)
 SQUARE_COLOR: tuple[int, int, int] = (40, 180, 255)
 SQUARE_COUNT: int = 45
 FPS: int = 60
+TEST_MODE_ON: bool = True
+GROWTH_SPEED: int = 500
 
 # Named constants make tuning easier than editing repeated magic numbers.
 # MIN_SIZE: float = 5.0
@@ -20,6 +22,7 @@ WALL_MARGIN: int = 75
 JITTER_STRENGTH: float = 20.0
 MIN_LIFE_SPAN: int = 30
 MAX_LIFE_SPAN: int = 60
+TRAILS_LENGTH: int = 30
 
 MAX_SIZE: float = 25.0
 MEDIUM_SIZE: float = 10.0
@@ -247,6 +250,10 @@ class Square:
 
     def draw(self, win: pygame.Surface) -> None:
         pygame.draw.rect(win, self.current_color, self.rect())
+        start_pos: tuple = (self.vector.x, self.vector.y)
+        end_pos: tuple = (self.vector.x + TRAILS_LENGTH, self.vector.y + TRAILS_LENGTH)
+        width: int = 2
+        pygame.draw.line(win, self.current_color, start_pos, end_pos, width)
 
 
 def filter_alive_squares(squares: list[Square], die: pygame.Sound) -> list[Square]:
