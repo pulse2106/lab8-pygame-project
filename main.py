@@ -7,12 +7,12 @@ WINDOW_WIDTH: int = 1680
 WINDOW_HEIGHT: int = 920
 BACKGROUND_COLOR: tuple[int, int, int] = (20, 20, 20)
 SQUARE_COLOR: tuple[int, int, int] = (40, 180, 255)
-SQUARE_COUNT: int = 10
+SQUARE_COUNT: int = 45
 FPS: int = 60
 
 # Named constants make tuning easier than editing repeated magic numbers.
-MIN_SIZE: float = 5.0
-MAX_SIZE: float = 60.0
+# MIN_SIZE: float = 5.0
+# MAX_SIZE: float = 60.0
 MIN_SPEED: float = 100.0
 MAX_BASE_SPEED: float = 450.0
 SIZE_SPEED_FACTOR: float = 300.0
@@ -21,6 +21,22 @@ JITTER_STRENGTH: float = 20.0
 MIN_LIFE_SPAN: int = 30
 MAX_LIFE_SPAN: int = 60
 
+MAX_SIZE: float = 25.0
+MEDIUM_SIZE: float = 10.0
+MIN_SIZE: float = 4.0
+SIZE_LIST: list = []
+
+def sizes() -> list[float]:
+    for i in range(30):
+        SIZE_LIST.append(MIN_SIZE)
+    for i in range(10):
+        SIZE_LIST.append(MEDIUM_SIZE)
+    for i in range(5):
+        SIZE_LIST.append(MAX_SIZE)
+    
+    return SIZE_LIST
+
+sizes()
 
 def safe_normalize(vector: pygame.Vector2) -> pygame.Vector2:
     # Zero-length vectors cannot be normalized safely, so keep them unchanged.
@@ -42,7 +58,7 @@ def blend_color(
 
 class Square:
     def __init__(self) -> None:
-        self.size = random.uniform(MIN_SIZE, MAX_SIZE)
+        self.size = random.choice(SIZE_LIST)
         size_ratio = (self.size - MIN_SIZE) / (MAX_SIZE - MIN_SIZE)
         self.max_speed = MAX_BASE_SPEED - (size_ratio * SIZE_SPEED_FACTOR)
         self.square_speed = random.uniform(MIN_SPEED, self.max_speed)
@@ -61,6 +77,9 @@ class Square:
 
     def rect(self) -> pygame.Rect:
         return pygame.Rect(self.vector.x, self.vector.y, self.size, self.size)
+    
+    def collision(self, other: Square) -> bool:
+        return self.rect().colliderect(other)
 
     def center(self) -> pygame.Vector2:
         # One center helper replaces separate x/y methods and keeps distance math simpler.
@@ -185,6 +204,13 @@ class Square:
 
         self.clamp_speed()
 
+    def collision_action(self, squares: list[Square], dt: float) -> None:
+        for other in squares:
+            if other is self:
+                continue
+            elif self.collision(other) == True:
+                self.movement_vect *= -1
+
     def square_movement(self, dt: float) -> None:
         self.jitter(dt)
         self.vector += self.movement_vect * dt
@@ -192,6 +218,7 @@ class Square:
     def update(self, squares: list[Square], dt: float) -> None:
         self.aging_effects()
 
+        self.collision_action(squares, dt)
         self.square_run_chase(squares, dt)
         self.square_movement(dt)
         self.wall_mech()
