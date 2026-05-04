@@ -115,6 +115,9 @@ class Square:
         self.movement_vect += jitter_vect * dt
         self.clamp_speed()
 
+    def clamp_size(self) -> None:
+        self.size = max(MIN_SIZE, (MAX_SIZE + MEDIUM_SIZE))
+
     def wall_mech(self) -> None:
         if self.vector.x <= 0:
             self.movement_vect.x = abs(self.movement_vect.x)
@@ -204,12 +207,30 @@ class Square:
 
         self.clamp_speed()
 
-    def collision_action(self, squares: list[Square], dt: float) -> None:
+    def eating_check(self, other: Square) -> bool:
+        if self.size > other.size:
+            other.birth_time = 0
+            self.rect().union(other)
+            self.size += other.size
+            self.clamp_size()
+            return True
+        else:
+            return False
+
+    # def collision_action(self, squares: list[Square], dt: float) -> None:
+    #     for other in squares:
+    #         if other is self:
+    #             continue
+    #         elif self.collision(other) == True:
+    #             self.movement_vect *= -1
+
+    def eating(self, squares: list[Square]) -> None:
         for other in squares:
             if other is self:
                 continue
-            elif self.collision(other) == True:
-                self.movement_vect *= -1
+            
+            if self.collision(other) == True:
+                self.eating_check(other)
 
     def square_movement(self, dt: float) -> None:
         self.jitter(dt)
@@ -217,8 +238,9 @@ class Square:
 
     def update(self, squares: list[Square], dt: float) -> None:
         self.aging_effects()
+        self.eating(squares)
 
-        self.collision_action(squares, dt)
+        # self.collision_action(squares, dt)
         self.square_run_chase(squares, dt)
         self.square_movement(dt)
         self.wall_mech()
