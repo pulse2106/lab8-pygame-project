@@ -121,6 +121,17 @@ class Square:
     def clamp_size(self) -> None:
         self.size = max(MIN_SIZE, (MAX_SIZE + MEDIUM_SIZE))
 
+    def wrapping(self):
+        if self.vector.x <= 0:
+            self.vector.x += WINDOW_WIDTH
+        elif self.vector.x >= WINDOW_WIDTH:
+            self.vector.x -= WINDOW_WIDTH
+
+        if self.vector.y <= 0:
+            self.vector.y += WINDOW_HEIGHT
+        elif self.vector.y >= WINDOW_HEIGHT:
+            self.vector.y -= WINDOW_HEIGHT
+
     def wall_mech(self) -> None:
         if self.vector.x <= 0:
             self.movement_vect.x = abs(self.movement_vect.x)
@@ -247,6 +258,7 @@ class Square:
         self.square_run_chase(squares, dt)
         self.square_movement(dt)
         self.wall_mech()
+        self.wrapping()
 
     def draw(self, win: pygame.Surface) -> None:
         pygame.draw.rect(win, self.current_color, self.rect())

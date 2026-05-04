@@ -4,6 +4,7 @@
 ## EXERCISE_3
     - Already implemented, using a margin of 75
     - It has a steering value or somewhat when passing though the wall_margin slowing it down the returning it in the opposite direction with the same velocity
+    - Turns I was heavily wrong on this, implemented the one boids correctly, didnt have enpough time to fix this properly
 
 ## EXERCISE_4
     - Added a collision check and a collision movement functions
@@ -23,3 +24,7 @@
 
 ## EXERCISE_8
     - I believe that the test should be checked by an assertation check, I have just forgotten how to write assert equal or in range functions, or which module to import. but overrall, we check if the square speed is withing our clamped square speed.
+
+## EXERCISE_9
+    - this will be an intresting feature to implement, I was thinking of different methods in which it will be possible and since we want to show a gradual growth.
+    - Since size is a basic int to show growth the size will be added onto it gradually probably through fractions of the original size.
