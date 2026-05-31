@@ -82,7 +82,7 @@ class Square:
         return pygame.Rect(self.vector.x, self.vector.y, self.size, self.size)
     
     def collision(self, other: Square) -> bool:
-        return self.rect().colliderect(other)
+        return self.rect().colliderect(other.rect())
 
     def center(self) -> pygame.Vector2:
         # One center helper replaces separate x/y methods and keeps distance math simpler.

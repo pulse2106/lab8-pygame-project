@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Squares Simulation - JavaScript Port</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #000;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #gameContainer {
+            position: relative;
+            background-color: #000;
+        }
+
+        #gameCanvas {
+            display: block;
+            border: 2px solid #333;
+            background-color: #141414;
+            cursor: default;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1680" height="920"></canvas>
+    </div>
+
+    <script>
+        // ===========================
+        // CONSTANTS
+        // ===========================
+        // Equivalent to Python module-level constants
+        const WINDOW_WIDTH = 1680;
+        const WINDOW_HEIGHT = 920;
+        const BACKGROUND_COLOR = { r: 20, g: 20, b: 20 };
+        const SQUARE_COLOR = { r: 40, g: 180, b: 255 };
+        const SQUARE_COUNT = 45;
+        const FPS = 60;
+        const TEST_MODE_ON = true;
+        const GROWTH_SPEED = 500;
+        const MIN_SPEED = 100.0;
+        const MAX_BASE_SPEED = 450.0;
+        const SIZE_SPEED_FACTOR = 300.0;
+        const WALL_MARGIN = 75;
+        const JITTER_STRENGTH = 20.0;
+        const MIN_LIFE_SPAN = 30;
+        const MAX_LIFE_SPAN = 60;
+        const TRAILS_LENGTH = 30;
+        const MAX_SIZE = 25.0;
+        const MEDIUM_SIZE = 10.0;
+        const MIN_SIZE = 4.0;
+
+        // Equivalent to Python SIZE_LIST global
+        let SIZE_LIST = [];
+
+        // ===========================
+        // SIZE LIST INITIALIZATION
+        // ===========================
+        // Equivalent to Python sizes() function
+        function initializeSizeList() {
+            SIZE_LIST = [];
+            for (let i = 0; i < 30; i++) {
+                SIZE_LIST.push(MIN_SIZE);
+            }
+            for (let i = 0; i < 10; i++) {
+                SIZE_LIST.push(MEDIUM_SIZE);
+            }
+            for (let i = 0; i < 5; i++) {
+                SIZE_LIST.push(MAX_SIZE);
+            }
+            return SIZE_LIST;
+        }
+
+        // ===========================
+        // VECTOR2 CLASS
+        // ===========================
+        // Equivalent to pygame.Vector2 - represents a 2D vector with x, y components
+        class Vector2 {
+            constructor(x = 0, y = 0) {
+                this.x = x;
+                this.y = y;
+            }
+
+            /**
+             * Equivalent to pygame.Vector2.length_squared()
+             * Returns the squared length of the vector (more efficient than length)
+             */
+            lengthSquared() {
+                return this.x * this.x + this.y * this.y;
+            }
+
+            /**
+             * Equivalent to pygame.Vector2.length()
+             * Returns the Euclidean length (magnitude) of the vector
+             */
+            length() {
+                return Math.sqrt(this.lengthSquared());
+            }
+
+            /**
+             * Equivalent to pygame.Vector2.normalize()
+             * Returns a new vector pointing in the same direction with length 1
+             */
+            normalize() {
+                const len = this.length();
+                if (len === 0) return new Vector2(0, 0);
+                return new Vector2(this.x / len, this.y / len);
+            }
+
+            /**
+             * Safe normalize: returns unchanged if zero-length
+             * Prevents division by zero errors
+             */
+            safeNormalize() {
+                return this.lengthSquared() > 0 ? this.normalize() : new Vector2(0, 0);
+            }
+
+            /**
+             * Vector addition: returns a new vector (this + other)
+             */
+            add(other) {
+                return new Vector2(this.x + other.x, this.y + other.y);
+            }
+
+            /**
+             * Vector subtraction: returns a new vector (this - other)
+             */
+            subtract(other) {
+                return new Vector2(this.x - other.x, this.y - other.y);
+            }
+
+            /**
+             * Scalar multiplication: returns a new vector scaled by scalar
+             */
+            multiply(scalar) {
+                return new Vector2(this.x * scalar, this.y * scalar);
+            }
+
+            /**
+             * In-place addition: modifies this vector and returns self
+             */
+            addInPlace(other) {
+                this.x += other.x;
+                this.y += other.y;
+                return this;
+            }
+
+            /**
+             * Clone: returns a copy of this vector
+             */
+            clone() {
+                return new Vector2(this.x, this.y);
+            }
+        }
+
+        // ===========================
+        // HELPER FUNCTIONS
+        // ===========================
+
+        /**
+         * Equivalent to random.choice() - pick random element from array
+         */
+        function chooseFromArray(arr) {
+            if (arr.length === 0) return null;
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        /**
+         * Equivalent to random.uniform(a, b) - random float in range [min, max)
+         */
+        function randomUniform(min, max) {
+            return min + Math.random() * (max - min);
+        }
+
+        /**
+         * Equivalent to random.randint(a, b) - random integer in range [min, max]
+         */
+        function randomInt(min, max) {
+            return Math.floor(randomUniform(min, max + 1));
+        }
+
+        /**
+         * Convert RGB object to CSS string format
+         * { r: 255, g: 0, b: 0 } => "rgb(255, 0, 0)"
+         */
+        function rgbToString(color) {
+            return `rgb(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)})`;
+        }
+
+        /**
+         * Equivalent to blend_color() - linear interpolation between two colors
+         * ratio in [0, 1]: 0 returns start color, 1 returns end color
+         */
+        function blendColor(start, end, ratio) {
+            return {
+                r: Math.round((start.r * (1.0 - ratio)) + (end.r * ratio)),
+                g: Math.round((start.g * (1.0 - ratio)) + (end.g * ratio)),
+                b: Math.round((start.b * (1.0 - ratio)) + (end.b * ratio))
+            };
+        }
+
+        /**
+         * Equivalent to safe_normalize() - normalize vector or keep if zero-length
+         */
+        function safeNormalize(vector) {
+            if (vector.lengthSquared() > 0) {
+                return vector.normalize();
+            }
+            return vector;
+        }
+
+        // ===========================
+        // SQUARE CLASS
+        // ===========================
+        /**
+         * Equivalent to Python Square class
+         * Represents a moving, animated square in the simulation
+         */
+        class Square {
+            /**
+             * Constructor: Initialize a square with random properties
+             * Equivalent to Python __init__()
+             */
+            constructor() {
+                // Pick a random size from the distribution list
+                this.size = chooseFromArray(SIZE_LIST);
+                
+                // Calculate max speed based on size (smaller = faster)
+                const sizeRatio = (this.size - MIN_SIZE) / (MAX_SIZE - MIN_SIZE);
+                this.maxSpeed = MAX_BASE_SPEED - (sizeRatio * SIZE_SPEED_FACTOR);
+                
+                // Random base speed for this square
+                this.squareSpeed = randomUniform(MIN_SPEED, this.maxSpeed);
+                
+                // Random starting position within bounds
+                this.vector = new Vector2(
+                    randomUniform(0, WINDOW_WIDTH - this.size),
+                    randomUniform(0, WINDOW_HEIGHT - this.size)
+                );
+                
+                // Random starting velocity (direction + magnitude)
+                this.movementVect = new Vector2(
+                    this.randomVelocity(),
+                    this.randomVelocity()
+                );
+                
+                // Jitter (random perturbation) strength
+                this.jitterStrength = JITTER_STRENGTH;
+                
+                // Timing for aging effect
+                this.birthTime = Date.now() / 1000; // Current time in seconds
+                this.lifeSpan = randomInt(MIN_LIFE_SPAN, MAX_LIFE_SPAN);
+                
+                // Store base max speed for reference
+                this.baseMaxSpeed = this.maxSpeed;
+                
+                // Color starts as default blue
+                this.currentColor = { ...SQUARE_COLOR };
+            }
+
+            /**
+             * Equivalent to Python rect() method
+             * Returns a bounding box object { x, y, width, height }
+             * Used for collision detection and rendering
+             */
+            rect() {
+                return {
+                    x: this.vector.x,
+                    y: this.vector.y,
+                    width: this.size,
+                    height: this.size
+                };
+            }
+
+            /**
+             * Equivalent to Python collision() method
+             * AABB (Axis-Aligned Bounding Box) collision detection
+             * Returns true if this square overlaps with another
+             */
+            collision(other) {
+                const r1 = this.rect();
+                const r2 = other.rect();
+                return !(r1.x + r1.width < r2.x ||
+                         r2.x + r2.width < r1.x ||
+                         r1.y + r1.height < r2.y ||
+                         r2.y + r2.height < r1.y);
+            }
+
+            /**
+             * Equivalent to Python center() method
+             * Returns the center point of the square as a Vector2
+             */
+            center() {
+                const r = this.rect();
+                return new Vector2(r.x + r.width / 2, r.y + r.height / 2);
+            }
+
+            /**
+             * Equivalent to Python aging_effects() method
+             * Updates color to transition from blue to red as square ages
+             * Creates a color blend based on age / lifespan ratio
+             */
+            agingEffects() {
+                const currentTime = Date.now() / 1000;
+                const age = currentTime - this.birthTime;
+                const lifeSpan = Math.max(1, this.lifeSpan);
+                const livedRatio = Math.max(0.0, Math.min(1.0, age / lifeSpan));
+                
+                const deathColor = { r: 255, g: 30, b: 30 }; // Red
+                this.currentColor = blendColor(SQUARE_COLOR, deathColor, livedRatio);
+            }
+
+            /**
+             * Equivalent to Python random_velocity() method
+             * Returns either +squareSpeed or -squareSpeed randomly
+             */
+            randomVelocity() {
+                return Math.random() < 0.5 ? this.squareSpeed : -this.squareSpeed;
+            }
+
+            /**
+             * Equivalent to Python clamp_speed() method
+             * Constrains velocity magnitude to [-maxSpeed, +maxSpeed]
+             * Prevents squares from moving unreasonably fast
+             */
+            clampSpeed() {
+                this.movementVect.x = Math.max(
+                    -this.maxSpeed,
+                    Math.min(this.movementVect.x, this.maxSpeed)
+                );
+                this.movementVect.y = Math.max(
+                    -this.maxSpeed,
+                    Math.min(this.movementVect.y, this.maxSpeed)
+                );
+            }
+
+            /**
+             * Equivalent to Python jitter() method
+             * Adds random perturbation to velocity each frame
+             * Creates more natural, less predictable movement
+             */
+            jitter(dt) {
+                const jitterVect = new Vector2(
+                    Math.random() < 0.5 ? -this.jitterStrength : this.jitterStrength,
+                    Math.random() < 0.5 ? -this.jitterStrength : this.jitterStrength
+                );
+                this.movementVect.addInPlace(jitterVect.multiply(dt));
+                this.clampSpeed();
+            }
+
+            /**
+             * Equivalent to Python clamp_size() method
+             * Ensures size stays within valid bounds
+             */
+            clampSize() {
+                this.size = Math.max(MIN_SIZE, Math.min(this.size, MAX_SIZE + MEDIUM_SIZE));
+            }
+
+            /**
+             * Equivalent to Python wrapping() method
+             * Screen wrapping: if square goes off one edge, appear on opposite edge
+             * Currently unused in favor of wall bounce, kept for structural parity
+             */
+            wrapping() {
+                if (this.vector.x <= 0) {
+                    this.vector.x += WINDOW_WIDTH;
+                } else if (this.vector.x >= WINDOW_WIDTH) {
+                    this.vector.x -= WINDOW_WIDTH;
+                }
+
+                if (this.vector.y <= 0) {
+                    this.vector.y += WINDOW_HEIGHT;
+                } else if (this.vector.y >= WINDOW_HEIGHT) {
+                    this.vector.y -= WINDOW_HEIGHT;
+                }
+            }
+
+            /**
+             * Equivalent to Python wall_mech() method
+             * Wall bounce: if square hits wall, reverse that axis velocity and clamp position
+             * This is the primary boundary behavior in the simulation
+             */
+            wallMech() {
+                if (this.vector.x <= 0) {
+                    this.movementVect.x = Math.abs(this.movementVect.x);
+                    this.vector.x = 0;
+                } else if (this.vector.x >= WINDOW_WIDTH - this.size) {
+                    this.movementVect.x = -Math.abs(this.movementVect.x);
+                    this.vector.x = WINDOW_WIDTH - this.size;
+                }
+
+                if (this.vector.y <= 0) {
+                    this.movementVect.y = Math.abs(this.movementVect.y);
+                    this.vector.y = 0;
+                } else if (this.vector.y >= WINDOW_HEIGHT - this.size) {
+                    this.movementVect.y = -Math.abs(this.movementVect.y);
+                    this.vector.y = WINDOW_HEIGHT - this.size;
+                }
+            }
+
+            /**
+             * Equivalent to Python find_threat_prey() method
+             * AI behavior: search nearby squares for predators and prey
+             * Returns { threat, prey } where threat is larger and prey is smaller
+             * Uses vision radius = (size * 10)^2 for distance check
+             */
+            findThreatPrey(squares) {
+                const selfCenter = this.center();
+                
+                let threat = null;
+                let minThreatDistance = Infinity;
+                let prey = null;
+                let minPreyDistance = Infinity;
+
+                for (const other of squares) {
+                    if (other === this) continue;
+
+                    const distVec = other.center().subtract(selfCenter);
+                    const dist = distVec.lengthSquared();
+                    const visionRadiusSquared = (other.size * 10) ** 2;
+
+                    if (dist < visionRadiusSquared) {
+                        if (other.size > this.size && dist < minThreatDistance) {
+                            threat = other;
+                            minThreatDistance = dist;
+                        } else if (other.size < this.size && dist < minPreyDistance) {
+                            prey = other;
+                            minPreyDistance = dist;
+                        }
+                    }
+                }
+
+                return { threat, prey };
+            }
+
+            /**
+             * Equivalent to Python move_vect() method
+             * AI steering: calculates movement vector based on threat/prey detection
+             * Returns steering force as a Vector2
+             */
+            moveVect(threat, prey) {
+                let runVect = new Vector2(0, 0);
+                let chaseVect = new Vector2(0, 0);
+
+                // Run away from threat (vector pointing away from predator)
+                if (threat) {
+                    runVect = this.vector.subtract(threat.vector).safeNormalize();
+                }
+
+                // Chase prey (vector pointing toward prey)
+                if (prey) {
+                    chaseVect = prey.vector.subtract(this.vector).safeNormalize();
+                }
+
+                // Combine chase and run vectors
+                let movementVect = chaseVect.add(runVect);
+
+                // Wall avoidance: push away from walls
+                let wallPush = new Vector2(0, 0);
+
+                if (this.vector.x < WALL_MARGIN) {
+                    wallPush.x = 1;
+                } else if (this.vector.x > WINDOW_WIDTH - this.size - WALL_MARGIN) {
+                    wallPush.x = -1;
+                }
+
+                if (this.vector.y < WALL_MARGIN) {
+                    wallPush.y = 1;
+                } else if (this.vector.y > WINDOW_HEIGHT - this.size - WALL_MARGIN) {
+                    wallPush.y = -1;
+                }
+
+                if (wallPush.lengthSquared() > 0) {
+                    movementVect = movementVect.add(wallPush.multiply(5));
+                }
+
+                // Normalize the combined vector
+                movementVect = movementVect.safeNormalize();
+
+                // Calculate steering multiplier (fear amplifies steering)
+                let steeringMultiplier = 4.0;
+
+                if (threat) {
+                    const sizeDifference = threat.size - this.size;
+                    const fearFactor = 1 + (sizeDifference / 10);
+                    steeringMultiplier *= fearFactor;
+                }
+
+                return movementVect.multiply(this.maxSpeed * steeringMultiplier);
+            }
+
+            /**
+             * Equivalent to Python square_run_chase() method
+             * Updates movement vector based on AI behavior (threat/prey)
+             */
+            squareRunChase(squares, dt) {
+                const { threat, prey } = this.findThreatPrey(squares);
+                const dodgingVect = this.moveVect(threat, prey);
+                this.movementVect.addInPlace(dodgingVect.multiply(dt));
+                this.clampSpeed();
+            }
+
+            /**
+             * Equivalent to Python eating_check() method
+             * If this square is larger, "eat" the other square (remove it from game)
+             * Returns true if eating occurred
+             */
+            eatingCheck(other) {
+                if (this.size > other.size) {
+                    // Mark other as dead by resetting birth time
+                    other.birthTime = 0;
+                    // Grow this square slightly
+                    this.size += other.size;
+                    this.clampSize();
+                    return true;
+                }
+                return false;
+            }
+
+            /**
+             * Equivalent to Python eating() method
+             * Check collision with all other squares and eat if larger
+             */
+            eating(squares) {
+                for (const other of squares) {
+                    if (other === this) continue;
+                    
+                    if (this.collision(other)) {
+                        this.eatingCheck(other);
+                    }
+                }
+            }
+
+            /**
+             * Equivalent to Python square_movement() method
+             * Update position based on velocity (kinematic update)
+             */
+            squareMovement(dt) {
+                const displacement = this.movementVect.multiply(dt);
+                this.vector.addInPlace(displacement);
+            }
+
+            /**
+             * Equivalent to Python update() method
+             * Main simulation step: update aging, eating, AI, movement, collisions
+             * Called once per frame for each square
+             */
+            update(squares, dt) {
+                this.agingEffects();
+                this.eating(squares);
+                this.squareRunChase(squares, dt);
+                this.squareMovement(dt);
+                this.wallMech();
+                this.wrapping();
+            }
+
+            /**
+             * Equivalent to Python draw() method
+             * Render square and trail line to canvas
+             * Uses Canvas 2D Context API instead of pygame.draw
+             */
+            draw(ctx) {
+                // Equivalent to pygame.draw.rect() - fill rectangle
+                const r = this.rect();
+                ctx.fillStyle = rgbToString(this.currentColor);
+                ctx.fillRect(r.x, r.y, r.width, r.height);
+
+                // Equivalent to pygame.draw.line() - draw trail line
+                ctx.strokeStyle = rgbToString(this.currentColor);
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.vector.x, this.vector.y);
+                ctx.lineTo(this.vector.x + TRAILS_LENGTH, this.vector.y + TRAILS_LENGTH);
+                ctx.stroke();
+            }
+        }
+
+        // ===========================
+        // APPLICATION FUNCTIONS
+        // ===========================
+
+        /**
+         * Equivalent to Python filter_alive_squares() function
+         * Remove dead squares (age exceeded lifespan) from the population
+         */
+        function filterAliveSquares(squares) {
+            const currentTime = Date.now() / 1000;
+            const survivors = [];
+            
+            for (const square of squares) {
+                if (currentTime - square.birthTime < square.lifeSpan) {
+                    survivors.push(square);
+                }
+            }
+            
+            // Replace array contents (equivalent to squares[:] = survivors)
+            squares.length = 0;
+            squares.push(...survivors);
+        }
+
+        /**
+         * Equivalent to Python reborn() function
+         * Spawn new squares to maintain population at SQUARE_COUNT
+         */
+        function reborn(squares) {
+            while (squares.length < SQUARE_COUNT) {
+                squares.push(new Square());
+            }
+        }
+
+        /**
+         * Equivalent to Python draw_scene() function
+         * Clear screen and render all squares
+         * Equivalent to pygame.fill() + drawing all objects
+         */
+        function drawScene(ctx, squares) {
+            // Equivalent to pygame.fill() - clear canvas with background color
+            ctx.fillStyle = rgbToString(BACKGROUND_COLOR);
+            ctx.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+            
+            // Draw all squares
+            for (const square of squares) {
+                square.draw(ctx);
+            }
+        }
+
+        /**
+         * Equivalent to Python draw_text() function
+         * Render text to canvas
+         * Uses Canvas 2D Context fillText instead of pygame font.render()
+         */
+        function drawText(ctx, text, font, textColor, x, y) {
+            ctx.font = font;
+            ctx.fillStyle = rgbToString(textColor);
+            ctx.fillText(text, x, y);
+        }
+
+        /**
+         * Equivalent to Python draw_squares() function
+         * Create initial population of squares
+         */
+        function drawSquares() {
+            const squares = [];
+            for (let i = 0; i < SQUARE_COUNT; i++) {
+                squares.push(new Square());
+            }
+            return squares;
+        }
+
+        /**
+         * Equivalent to Python update_window() function
+         * Single frame update: filter dead, spawn new, update all squares
+         */
+        function updateWindow(squares, dt) {
+            filterAliveSquares(squares);
+            reborn(squares);
+            for (const square of squares) {
+                square.update(squares, dt);
+            }
+        }
+
+        // ===========================
+        // MAIN LOOP STATE
+        // ===========================
+        let lastFrameTime = 0;
+        let shouldRun = true;
+        let squares = [];
+        let frameCount = 0;
+        let fpsCounter = 0;
+        let currentFPS = 0;
+        let canvas = null;
+        let ctx = null;
+
+        const textFont = '30px Arial';
+        const FRAME_TIME = 1000 / FPS; // milliseconds per frame
+
+        // ===========================
+        // INITIALIZATION
+        // ===========================
+        /**
+         * Initialize the simulation
+         * Equivalent to Python main() initialization code
+         */
+        function init() {
+            // Setup canvas
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            canvas.width = WINDOW_WIDTH;
+            canvas.height = WINDOW_HEIGHT;
+
+            // Initialize size distribution
+            initializeSizeList();
+
+            // Create initial population
+            squares = drawSquares();
+
+            // Setup keyboard events
+            document.addEventListener('keydown', (event) => {
+                if (event.key.toLowerCase() === 'q') {
+                    shouldRun = false;
+                }
+            });
+
+            // Handle page unload
+            window.addEventListener('beforeunload', () => {
+                shouldRun = false;
+            });
+
+            // Start animation loop
+            requestAnimationFrame(animate);
+        }
+
+        // ===========================
+        // MAIN ANIMATION LOOP
+        // ===========================
+        /**
+         * Main game loop
+         * Equivalent to Python while loop with clock.tick(FPS)
+         * Uses requestAnimationFrame instead of blocking clock.tick()
+         */
+        function animate(currentTime) {
+            if (!shouldRun) return;
+
+            // Calculate delta time in seconds
+            // Equivalent to: dt = clock.tick(FPS) / 1000
+            let dt;
+            if (lastFrameTime === 0) {
+                dt = FRAME_TIME / 1000; // First frame
+            } else {
+                dt = (currentTime - lastFrameTime) / 1000; // Delta in seconds
+            }
+            lastFrameTime = currentTime;
+
+            // Clamp dt to prevent large jumps (e.g., if tab is not focused)
+            dt = Math.min(dt, 0.1); // Max 100ms per frame
+
+            // Update FPS counter
+            fpsCounter++;
+            if (currentTime - frameCount > 1000) {
+                currentFPS = fpsCounter;
+                fpsCounter = 0;
+                frameCount = currentTime;
+            }
+
+            // Equivalent to: update_window(squares, dt)
+            updateWindow(squares, dt);
+
+            // Equivalent to: draw_scene(win, squares)
+            drawScene(ctx, squares);
+
+            // Equivalent to pygame.display.flip()
+            // (automatic in requestAnimationFrame - canvas updates are shown)
+
+            // Equivalent to: draw_text(...) calls for HUD
+            drawText(ctx, `FPS: ${Math.round(currentFPS)}`, textFont, { r: 255, g: 255, b: 255 }, 20, 10);
+            drawText(ctx, 'Press q to exit', textFont, { r: 255, g: 255, b: 255 }, 20, 40);
+            drawText(ctx, `Number of Squares: ${SQUARE_COUNT}`, textFont, { r: 255, g: 255, b: 255 }, 20, 70);
+
+            // Continue animation loop
+            requestAnimationFrame(animate);
+        }
+
+        // ===========================
+        // STARTUP
+        // ===========================
+        // Equivalent to: if __name__ == "__main__": main()
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
